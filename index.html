@@ -104,6 +104,8 @@
   .swipehint{font-size:11px;color:var(--muted);margin:2px 2px 8px;font-style:italic}
   .totoday{flex:none;border:1px solid var(--pink);background:#fff;color:var(--pink);border-radius:8px;padding:6px 11px;font:inherit;font-size:12px;font-weight:700}
   .totoday:active{background:#ffe6fb}
+  .donetoday{margin-top:10px;font-size:13px;font-weight:600;color:var(--green);text-align:center}
+  .nudge{background:#fff7e6;border:1px solid #f0d9a8;color:#7a5a12;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:600;margin-bottom:12px}
   /* right-now actions + focus mode */
   .rn-actions{display:flex;gap:10px;align-items:center}
   .rn-focus{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.32);border-radius:10px;padding:10px 18px;font:inherit;font-size:15px;font-weight:700}
@@ -131,6 +133,7 @@
   <main>
     <section class="view on" data-view="today">
       <div data-weatherflag></div>
+      <div data-evening-nudge></div>
       <div class="rightnow" data-rightnow hidden></div>
       <form class="cap" data-cap autocomplete="off">
         <input type="text" data-cap-input placeholder="Capture a to-do — sort later…" enterkeyhint="done">
@@ -146,7 +149,7 @@
         <div data-holding-list></div>
       </div>
       <div class="card meds-card">
-        <div class="h">Meds &amp; habits today</div>
+        <div class="h">Meds &amp; habits today <span class="ct" data-meds-stat></span></div>
         <div class="medrow" data-meds></div>
       </div>
     </section>
@@ -287,8 +290,14 @@
     el.hidden=false; el.innerHTML='<div class="rn-label">Right now</div><div class="rn-text">'+esc(f[0].text)+'</div><div class="rn-actions"><button class="rn-done" data-tick-focus="'+esc(f[0].id)+'">Done</button><button class="rn-focus" data-focus-enter>Focus</button></div>';
   }
   var MEDS=[{key:'sertraline',label:'Sertraline'},{key:'atorvastatin',label:'Atorva'},{key:'cpap',label:'CPAP'},{key:'trelegy',label:'Trelegy'},{key:'avamys',label:'Avamys'},{key:'fexofenadine',label:'Fexo'},{key:'exercise',label:'Exercise'},{key:'weight',label:'Weight'},{key:'linkedin',label:'LinkedIn'}];
-  function medDone(key){ var d=(cached&&cached.dailyChecks&&cached.dailyChecks[today()])||{}; if(d[key]===true) return true; if(d.meds===true && ['sertraline','atorvastatin','trelegy','fexofenadine'].indexOf(key)!==-1) return true; if(d.sprays===true && key==='avamys') return true; return false; }
-  function renderMeds(){ var el=$('[data-meds]'); if(!el||!cached) return; el.innerHTML=MEDS.map(function(m){ return '<button class="medchip'+(medDone(m.key)?' on':'')+'" data-med="'+m.key+'">'+esc(m.label)+'</button>'; }).join(''); }
+  var STREAK_MIN=6; // a 'good day' = at least this many of the 9 ticked (tweak to taste)
+  function medDoneOn(key,iso){ var d=(cached&&cached.dailyChecks&&cached.dailyChecks[iso])||{}; if(d[key]===true) return true; if(d.meds===true && ['sertraline','atorvastatin','trelegy','fexofenadine'].indexOf(key)!==-1) return true; if(d.sprays===true && key==='avamys') return true; return false; }
+  function medDone(key){ return medDoneOn(key, today()); }
+  function medsCountFor(iso){ var n=0; for(var i=0;i<MEDS.length;i++){ if(medDoneOn(MEDS[i].key,iso)) n++; } return n; }
+  function medsStreak(){ var n=0, iso=today(); if(medsCountFor(iso)<STREAK_MIN) iso=addDays(iso,-1); var guard=0; while(medsCountFor(iso)>=STREAK_MIN && guard<400){ n++; iso=addDays(iso,-1); guard++; } return n; }
+  function renderMeds(){ var el=$('[data-meds]'); if(el&&cached) el.innerHTML=MEDS.map(function(m){ return '<button class="medchip'+(medDone(m.key)?' on':'')+'" data-med="'+m.key+'">'+esc(m.label)+'</button>'; }).join('');
+    var stat=$('[data-meds-stat]'); if(stat&&cached){ var c=medsCountFor(today()), s=medsStreak(); stat.textContent=c+'/'+MEDS.length+(s>=1?(' · 🔥 '+s):''); }
+  }
   function renderNotes(){
     var bd=$('[data-bd]'); if(bd && cached && document.activeElement!==bd){ var v=(cached.scratchDump||''); if(bd.value!==v) bd.value=v; }
     var list=$('[data-ci-list]'); if(list && cached){ ensureShape(cached);
@@ -472,6 +481,7 @@
       }).join('');
     }
     if(!html) html='<div class="empty">Nothing for today. Add one above, or pick your focus items on The Hub.</div>';
+    var dn=doneTodayCount(); if(dn>0) html+='<div class="donetoday">✓ '+dn+' done today — nice work</div>';
     el.innerHTML=html;
     var ct=$('[data-today-ct]'); if(ct) ct.textContent=(d.chosen.length+d.due.length);
   }
@@ -486,10 +496,12 @@
       return '<div class="todo"><span class="tx">'+esc(it.text)+'</span><button class="totoday" data-promote-today="'+esc(it.id)+'">→ Today</button><button class="del" data-focus-del="'+esc(it.id)+'">✕</button></div>';
     }).join('');
   }
+  function doneTodayCount(){ if(!cached||!cached.focus||!Array.isArray(cached.focus.items)) return 0; var t=today(); return cached.focus.items.filter(function(it){ return it&&it.done&&it.doneAt&&isoOf(new Date(it.doneAt))===t; }).length; }
+  function renderEveningNudge(){ var el=$('[data-evening-nudge]'); if(!el) return; if(!cached){ el.innerHTML=''; return; } var c=medsCountFor(today()); if(new Date().getHours()>=18 && c<MEDS.length){ el.innerHTML='<div class="nudge">🌙 Evening check — '+c+'/'+MEDS.length+' meds &amp; habits done</div>'; } else el.innerHTML=''; }
   function renderAll(){
     if(!cached) return;
     var sub=$('[data-datesub]'); if(sub) sub.textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-    renderRightNow(); renderToday(); renderHolding(); renderMeds(); renderDiary(); renderNotes(); renderWeatherFlag();
+    renderRightNow(); renderToday(); renderHolding(); renderMeds(); renderEveningNudge(); renderDiary(); renderNotes(); renderWeatherFlag();
   }
 
   // (Removed: dead duplicate submit/click handlers that called an undefined
@@ -564,8 +576,17 @@
     });
   }
 
+  // ---- pull-to-refresh: drag down at the top of the screen to sync ----
+  function setupPullRefresh(){
+    var startY=0, pulling=false, armed=false;
+    function pt(e){ return (e.touches&&e.touches[0])?e.touches[0]:e; }
+    document.addEventListener('touchstart',function(e){ if(($('#app')&&$('#app').hidden)||(window.scrollY||document.documentElement.scrollTop||0)>0){ pulling=false; return; } startY=pt(e).clientY; pulling=true; armed=false; },{passive:true});
+    document.addEventListener('touchmove',function(e){ if(!pulling) return; if((pt(e).clientY-startY)>70 && (window.scrollY||0)<=0) armed=true; },{passive:true});
+    document.addEventListener('touchend',function(){ if(pulling && armed && creds) refresh(); pulling=false; armed=false; },{passive:true});
+  }
+
   // ---- boot ----
-  loadPending(); loadCache(); setupSwipe(); setupFocusMode();
+  loadPending(); loadCache(); setupSwipe(); setupFocusMode(); setupPullRefresh();
   window.addEventListener('online', function(){ if(creds && pending.length){ setStatus('saving','reconnecting'); flush(); } });
   document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible' && creds && pending.length) flush(); });
   if(loadCreds()){ openApp(); } else { openSetup(); }
