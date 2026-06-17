@@ -223,10 +223,21 @@
     if(!creds || !pending.length || flushing) return;
     if(typeof navigator!=='undefined' && navigator.onLine===false){ setStatus('error','offline'); return; }
     flushing=true; setStatus('saving','saving');
-    fetchState().then(function(state){ ensureShape(state);
-      pending.forEach(function(op){ applyOp(state, op); });
-      return writeState(state).then(function(){ cached=state; saveCache(); pending=[]; savePending(); renderAll(); setStatus('synced','synced'); });
-    }).catch(function(e){ setStatus('error', (typeof navigator!=='undefined'&&navigator.onLine===false)?'offline':'error'); console.error(e, e&&e.detail||''); })
+    var tries=0;
+    function attempt(){
+      return fetchState().then(function(state){ ensureShape(state);
+        var base=remoteUpdatedAt;            // gist version we just read
+        pending.forEach(function(op){ applyOp(state, op); });
+        // Optimistic-concurrency guard: if the gist moved between our read and
+        // our write (e.g. the Mac pushed in that window), rebuild on the newer
+        // state instead of clobbering it. Ops are idempotent, so replay is safe.
+        return api('GET').then(function(g){
+          if(g && g.updated_at && base && g.updated_at!==base && tries<3){ tries++; return attempt(); }
+          return writeState(state).then(function(){ cached=state; saveCache(); pending=[]; savePending(); renderAll(); setStatus('synced','synced'); });
+        });
+      });
+    }
+    attempt().catch(function(e){ setStatus('error', (typeof navigator!=='undefined'&&navigator.onLine===false)?'offline':'error'); console.error(e, e&&e.detail||''); })
       .then(function(){ flushing=false; });
   }
   function buzz(){ try{ if(navigator.vibrate) navigator.vibrate(8); }catch(_){ } }
