@@ -101,6 +101,17 @@
   .todo.swipeable.willpin{background:linear-gradient(90deg,#ffffff,#ffe6fb)}
   .pinflag{flex:none;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 7px;border-radius:6px;background:#ffe0fb;color:var(--pink);align-self:center}
   .swipehint{font-size:11px;color:var(--muted);margin:2px 2px 8px;font-style:italic}
+  /* right-now actions + focus mode */
+  .rn-actions{display:flex;gap:10px;align-items:center}
+  .rn-focus{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.32);border-radius:10px;padding:10px 18px;font:inherit;font-size:15px;font-weight:700}
+  .rn-focus:active{background:rgba(255,255,255,.26)}
+  .focusmode{position:fixed;inset:0;z-index:50;background:linear-gradient(160deg,#080A51,#23267a);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:calc(env(safe-area-inset-top) + 28px) 26px calc(env(safe-area-inset-bottom) + 28px)}
+  .focusmode[hidden]{display:none}
+  .fm-label{font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:var(--pink);font-weight:700;margin-bottom:22px}
+  .fm-text{font-size:30px;font-weight:600;line-height:1.32;max-width:600px;margin-bottom:44px}
+  .fm-done{background:var(--pink);color:#fff;border:0;border-radius:14px;padding:17px 46px;font:inherit;font-size:18px;font-weight:700}
+  .fm-done:active{background:#c406b8}
+  .fm-exit{position:absolute;top:calc(env(safe-area-inset-top) + 14px);right:16px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:8px 16px;font:inherit;font-size:13px;font-weight:600}
 </style>
 </head>
 <body>
@@ -157,6 +168,13 @@
     <button data-nav="notes"><span class="ic">✎</span>Notes</button>
     <button data-nav="settings"><span class="ic">⚙</span>Setup</button>
   </nav>
+
+  <div id="focusmode" class="focusmode" hidden>
+    <button class="fm-exit" data-fm-exit>Exit</button>
+    <div class="fm-label">Right now</div>
+    <div class="fm-text" data-fm-text></div>
+    <button class="fm-done" data-fm-done>Done</button>
+  </div>
 </div>
 
 <div id="setup" class="setup" hidden>
@@ -256,7 +274,7 @@
   function renderRightNow(){ var el=$('[data-rightnow]'); if(!el||!cached){ return; } ensureShape(cached);
     var f=cached.focus.items.filter(function(it){return it&&it.bucket==='today'&&!it.done;}).sort(focusOrder);
     if(!f.length){ el.hidden=true; el.innerHTML=''; return; }
-    el.hidden=false; el.innerHTML='<div class="rn-label">Right now</div><div class="rn-text">'+esc(f[0].text)+'</div><button class="rn-done" data-tick-focus="'+esc(f[0].id)+'">Done</button>';
+    el.hidden=false; el.innerHTML='<div class="rn-label">Right now</div><div class="rn-text">'+esc(f[0].text)+'</div><div class="rn-actions"><button class="rn-done" data-tick-focus="'+esc(f[0].id)+'">Done</button><button class="rn-focus" data-focus-enter>Focus</button></div>';
   }
   var MEDS=[{key:'sertraline',label:'Sertraline'},{key:'atorvastatin',label:'Atorva'},{key:'cpap',label:'CPAP'},{key:'trelegy',label:'Trelegy'},{key:'avamys',label:'Avamys'},{key:'fexofenadine',label:'Fexo'},{key:'exercise',label:'Exercise'},{key:'weight',label:'Weight'},{key:'linkedin',label:'LinkedIn'}];
   function medDone(key){ var d=(cached&&cached.dailyChecks&&cached.dailyChecks[today()])||{}; if(d[key]===true) return true; if(d.meds===true && ['sertraline','atorvastatin','trelegy','fexofenadine'].indexOf(key)!==-1) return true; if(d.sprays===true && key==='avamys') return true; return false; }
@@ -513,8 +531,20 @@
     document.addEventListener('touchcancel',end,{passive:true});
   }
 
+  // ---- focus mode: full-screen single task, no distractions (phone-only view) ----
+  var _focusId=null;
+  function currentFocus(){ if(!cached) return null; ensureShape(cached); var f=cached.focus.items.filter(function(it){return it&&it.bucket==='today'&&!it.done;}).sort(focusOrder); return f[0]||null; }
+  function exitFocus(){ _focusId=null; var fm=$('#focusmode'); if(fm) fm.hidden=true; }
+  function setupFocusMode(){
+    document.addEventListener('click',function(e){
+      if(e.target.closest && e.target.closest('[data-focus-enter]')){ var it=currentFocus(); if(!it) return; _focusId=it.id; var tx=$('[data-fm-text]'); if(tx) tx.textContent=it.text; var fm=$('#focusmode'); if(fm) fm.hidden=false; buzz(); return; }
+      if(e.target.closest && e.target.closest('[data-fm-done]')){ if(_focusId) enqueue({t:'tf',id:_focusId,at:new Date().toISOString()},{haptic:true}); exitFocus(); return; }
+      if(e.target.closest && e.target.closest('[data-fm-exit]')){ exitFocus(); return; }
+    });
+  }
+
   // ---- boot ----
-  loadPending(); loadCache(); setupSwipe();
+  loadPending(); loadCache(); setupSwipe(); setupFocusMode();
   window.addEventListener('online', function(){ if(creds && pending.length){ setStatus('saving','reconnecting'); flush(); } });
   document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible' && creds && pending.length) flush(); });
   if(loadCreds()){ openApp(); } else { openSetup(); }
