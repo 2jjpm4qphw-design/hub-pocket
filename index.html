@@ -96,6 +96,11 @@
   .box.on::after{content:'\2713';color:#fff;font-size:15px;line-height:1;position:absolute;left:4px;top:1px}
   .sechead{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 2px 6px;border-top:1px solid var(--hair);padding-top:10px}
   .lnk{color:var(--pink);font-weight:600;cursor:pointer}
+  /* swipe-to-pin */
+  .todo.swipeable{transition:transform .18s ease;touch-action:pan-y}
+  .todo.swipeable.willpin{background:linear-gradient(90deg,#ffffff,#ffe6fb)}
+  .pinflag{flex:none;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 7px;border-radius:6px;background:#ffe0fb;color:var(--pink);align-self:center}
+  .swipehint{font-size:11px;color:var(--muted);margin:2px 2px 8px;font-style:italic}
 </style>
 </head>
 <body>
@@ -210,6 +215,7 @@
     else if(op.t==='idl'){ st.changeIdeas=st.changeIdeas.filter(function(x){return x.id!==op.id;}); }
     else if(op.t==='icd'){ st.changeIdeas=st.changeIdeas.filter(function(x){return !x.done;}); }
     else if(op.t==='bd'){ st.scratchDump=op.text; }
+    else if(op.t==='pin'){ var pf=st.focus.items.find(function(x){return x.id===op.id;}); if(pf){ pf.pinnedAt=op.ms; } }
     return st;
   }
   function enqueue(op, opts){ opts=opts||{};
@@ -243,8 +249,12 @@
   function buzz(){ try{ if(navigator.vibrate) navigator.vibrate(8); }catch(_){ } }
 
   // ===== extra renders =====
+  // Today focus order: most-recently-pinned first (= Right Now), then by creation.
+  // pinnedAt is a NUMBER so the Hub's union-merge resolves clashes by taking the
+  // later one — i.e. whatever was pinned most recently on either device wins.
+  function focusOrder(a,b){ var pa=+(a&&a.pinnedAt)||0, pb=+(b&&b.pinnedAt)||0; if(pa!==pb) return pb-pa; return String((a&&a.created)||'').localeCompare(String((b&&b.created)||'')); }
   function renderRightNow(){ var el=$('[data-rightnow]'); if(!el||!cached){ return; } ensureShape(cached);
-    var f=cached.focus.items.filter(function(it){return it&&it.bucket==='today'&&!it.done;});
+    var f=cached.focus.items.filter(function(it){return it&&it.bucket==='today'&&!it.done;}).sort(focusOrder);
     if(!f.length){ el.hidden=true; el.innerHTML=''; return; }
     el.hidden=false; el.innerHTML='<div class="rn-label">Right now</div><div class="rn-text">'+esc(f[0].text)+'</div><button class="rn-done" data-tick-focus="'+esc(f[0].id)+'">Done</button>';
   }
@@ -402,7 +412,7 @@
   function todayItems(state){
     var t=today();
     var focus=(state.focus&&Array.isArray(state.focus.items))?state.focus.items:[];
-    var chosen=focus.filter(function(it){ return it && it.bucket==='today' && !it.done; });
+    var chosen=focus.filter(function(it){ return it && it.bucket==='today' && !it.done; }).sort(focusOrder);
     var seen={}, due=[];
     (state.todos||[]).forEach(function(td){
       if(td.checked||!td.day||td.day>t) return;
@@ -418,8 +428,10 @@
     var t=today(); var d=todayItems(cached);
     var html='';
     if(d.chosen.length){
-      html+=d.chosen.map(function(it){
-        return '<div class="todo"><span class="box" data-tick-focus="'+esc(it.id)+'"></span><span class="tx">'+esc(it.text)+'</span></div>';
+      if(d.chosen.length>1) html+='<div class="swipehint">Swipe a task left to make it your Right Now.</div>';
+      html+=d.chosen.map(function(it,i){
+        var flag=(i===0 && (+it.pinnedAt||0)>0)?'<span class="pinflag">now</span>':'';
+        return '<div class="todo swipeable" data-todo-id="'+esc(it.id)+'"><span class="box" data-tick-focus="'+esc(it.id)+'"></span><span class="tx">'+esc(it.text)+'</span>'+flag+'</div>';
       }).join('');
     }
     if(d.due.length){
@@ -481,8 +493,28 @@
   function startPoll(){ if(pollTimer) clearInterval(pollTimer); pollTimer=setInterval(function(){ if(!busy && document.visibilityState==='visible') refresh(); }, 45000); }
   document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible' && creds && !$('#app').hidden) refresh(); });
 
+  // ---- swipe-to-pin: drag a today task left to make it the Right Now ----
+  function pinFocus(id){ if(!id) return; enqueue({t:'pin',id:id,ms:Date.now(),at:new Date().toISOString()},{haptic:true}); }
+  function setupSwipe(){
+    var startX=0,startY=0,dragging=false,horiz=false,row=null,rid=null;
+    function pt(e){ return (e.touches&&e.touches[0])?e.touches[0]:e; }
+    document.addEventListener('touchstart',function(e){
+      var t=e.target.closest && e.target.closest('.todo.swipeable[data-todo-id]'); if(!t) return;
+      var p=pt(e); startX=p.clientX; startY=p.clientY; dragging=true; horiz=false; row=t; rid=t.getAttribute('data-todo-id');
+    },{passive:true});
+    document.addEventListener('touchmove',function(e){
+      if(!dragging||!row) return; var p=pt(e); var dx=p.clientX-startX, dy=p.clientY-startY;
+      if(!horiz){ if(Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy)) horiz=true; else if(Math.abs(dy)>10){ dragging=false; return; } else return; }
+      if(e.cancelable) e.preventDefault();
+      var tx=Math.min(0,dx); row.style.transform='translateX('+tx+'px)'; row.classList.toggle('willpin', dx<=-70);
+    },{passive:false});
+    function end(){ if(!dragging) return; var commit=!!(row&&row.classList.contains('willpin')); if(row){ row.style.transform=''; row.classList.remove('willpin'); } var id=rid; dragging=false; horiz=false; row=null; rid=null; if(commit&&id) pinFocus(id); }
+    document.addEventListener('touchend',end,{passive:true});
+    document.addEventListener('touchcancel',end,{passive:true});
+  }
+
   // ---- boot ----
-  loadPending(); loadCache();
+  loadPending(); loadCache(); setupSwipe();
   window.addEventListener('online', function(){ if(creds && pending.length){ setStatus('saving','reconnecting'); flush(); } });
   document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible' && creds && pending.length) flush(); });
   if(loadCreds()){ openApp(); } else { openSetup(); }
