@@ -233,7 +233,9 @@
   function savePending(){ lsSet(PEND_KEY, JSON.stringify(pending)); }
   function loadCache(){ try{ var c=JSON.parse(lsGet(CACHE_KEY)||'null'); if(c&&typeof c==='object') cached=c; }catch(_){ } }
   function saveCache(){ try{ lsSet(CACHE_KEY, JSON.stringify(cached)); }catch(_){ } }
-  function ensureShape(st){ if(!st||typeof st!=='object') return st; if(!st.focus||typeof st.focus!=='object') st.focus={items:[]}; if(!Array.isArray(st.focus.items)) st.focus.items=[]; if(!Array.isArray(st.todos)) st.todos=[]; if(!Array.isArray(st.events)) st.events=[]; if(st.scratchDump===undefined) st.scratchDump=(typeof st.brainDump==='string'?st.brainDump:''); if(typeof st.scratchDump!=='string') st.scratchDump=''; if(!Array.isArray(st.changeIdeas)) st.changeIdeas=[]; if(!st.dailyChecks||typeof st.dailyChecks!=='object') st.dailyChecks={}; return st; }
+  function ensureShape(st){ if(!st||typeof st!=='object') return st; if(!st.focus||typeof st.focus!=='object') st.focus={items:[]}; if(!Array.isArray(st.focus.items)) st.focus.items=[]; if(!Array.isArray(st.todos)) st.todos=[]; if(!Array.isArray(st.events)) st.events=[]; if(st.scratchDump===undefined) st.scratchDump=(typeof st.brainDump==='string'?st.brainDump:''); if(typeof st.scratchDump!=='string') st.scratchDump=''; if(!Array.isArray(st.changeIdeas)) st.changeIdeas=[]; if(!st.dailyChecks||typeof st.dailyChecks!=='object') st.dailyChecks={}; if(!st.deletions||typeof st.deletions!=='object') st.deletions={};
+    var _del=st.deletions; if(_del){ st.focus.items=st.focus.items.filter(function(x){return !(x&&_del[x.id]);}); st.changeIdeas=st.changeIdeas.filter(function(x){return !(x&&_del[x.id]);}); st.todos=st.todos.filter(function(x){return !(x&&_del[x.id]);}); }
+    return st; }
   function applyOp(st, op){ ensureShape(st); var t=today();
     if(op.t==='cap'){ if(!st.focus.items.some(function(x){return x.id===op.id;})) st.focus.items.push({id:op.id,text:op.text,bucket:'unsorted',created:op.at}); }
     else if(op.t==='tf'){ var it=st.focus.items.find(function(x){return x.id===op.id;}); if(it){ it.done=true; it.doneAt=op.at; } }
@@ -241,12 +243,12 @@
     else if(op.t==='med'){ if(!st.dailyChecks[op.date]) st.dailyChecks[op.date]={}; st.dailyChecks[op.date][op.key]=op.val; }
     else if(op.t==='ia'){ if(!st.changeIdeas.some(function(x){return x.id===op.id;})) st.changeIdeas.push({id:op.id,text:op.text,done:false,created:op.at}); }
     else if(op.t==='it'){ var ci=st.changeIdeas.find(function(x){return x.id===op.id;}); if(ci){ ci.done=op.val; ci.doneAt=op.val?op.at:null; } }
-    else if(op.t==='idl'){ st.changeIdeas=st.changeIdeas.filter(function(x){return x.id!==op.id;}); }
-    else if(op.t==='icd'){ st.changeIdeas=st.changeIdeas.filter(function(x){return !x.done;}); }
+    else if(op.t==='idl'){ st.deletions=st.deletions||{}; st.deletions[op.id]=op.at||Date.now(); st.changeIdeas=st.changeIdeas.filter(function(x){return x.id!==op.id;}); }
+    else if(op.t==='icd'){ (st.changeIdeas||[]).forEach(function(x){ if(x&&x.done){ st.deletions=st.deletions||{}; st.deletions[x.id]=op.at||Date.now(); } }); st.changeIdeas=st.changeIdeas.filter(function(x){return !x.done;}); }
     else if(op.t==='bd'){ st.scratchDump=op.text; }
     else if(op.t==='pin'){ var pf=st.focus.items.find(function(x){return x.id===op.id;}); if(pf){ pf.pinnedAt=op.ms; } }
     else if(op.t==='bk'){ var bi=st.focus.items.find(function(x){return x.id===op.id;}); if(bi){ bi.bucket=op.bucket; } }
-    else if(op.t==='fdl'){ st.focus.items=st.focus.items.filter(function(x){return x.id!==op.id;}); }
+    else if(op.t==='fdl'){ st.deletions=st.deletions||{}; st.deletions[op.id]=op.at||Date.now(); st.focus.items=st.focus.items.filter(function(x){return x.id!==op.id;}); }
     return st;
   }
   function enqueue(op, opts){ opts=opts||{};
@@ -500,6 +502,7 @@
   function renderEveningNudge(){ var el=$('[data-evening-nudge]'); if(!el) return; if(!cached){ el.innerHTML=''; return; } var c=medsCountFor(today()); if(new Date().getHours()>=18 && c<MEDS.length){ el.innerHTML='<div class="nudge">🌙 Evening check — '+c+'/'+MEDS.length+' meds &amp; habits done</div>'; } else el.innerHTML=''; }
   function renderAll(){
     if(!cached) return;
+    ensureShape(cached);
     var sub=$('[data-datesub]'); if(sub) sub.textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
     renderRightNow(); renderToday(); renderHolding(); renderMeds(); renderEveningNudge(); renderDiary(); renderNotes(); renderWeatherFlag();
   }
