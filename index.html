@@ -61,6 +61,7 @@
   .ev.past{opacity:.45}
   .dayempty{color:#b6b6c2;font-size:13px;font-style:italic;padding:4px 2px}
   .moreweek{width:100%;border:1px solid var(--hair);background:#fff;color:var(--muted);border-radius:12px;padding:11px;font:inherit;font-size:14px;font-weight:600;margin-top:6px}
+  .weekdiv{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--pink);margin:24px 2px 8px;padding-top:16px;border-top:2px solid var(--hair)}
   /* bottom nav */
   nav{position:fixed;bottom:0;left:0;right:0;z-index:10;background:#fff;border-top:1px solid var(--hair);display:flex;padding-bottom:env(safe-area-inset-bottom)}
   nav button{flex:1;border:0;background:none;padding:11px 0 13px;font:inherit;font-size:11px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px}
@@ -101,6 +102,8 @@
   .todo.swipeable.willpin{background:linear-gradient(90deg,#ffffff,#ffe6fb)}
   .pinflag{flex:none;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 7px;border-radius:6px;background:#ffe0fb;color:var(--pink);align-self:center}
   .swipehint{font-size:11px;color:var(--muted);margin:2px 2px 8px;font-style:italic}
+  .totoday{flex:none;border:1px solid var(--pink);background:#fff;color:var(--pink);border-radius:8px;padding:6px 11px;font:inherit;font-size:12px;font-weight:700}
+  .totoday:active{background:#ffe6fb}
   /* right-now actions + focus mode */
   .rn-actions{display:flex;gap:10px;align-items:center}
   .rn-focus{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.32);border-radius:10px;padding:10px 18px;font:inherit;font-size:15px;font-weight:700}
@@ -130,12 +133,17 @@
       <div data-weatherflag></div>
       <div class="rightnow" data-rightnow hidden></div>
       <form class="cap" data-cap autocomplete="off">
-        <input type="text" data-cap-input placeholder="Add a to-do…" enterkeyhint="done">
+        <input type="text" data-cap-input placeholder="Capture a to-do — sort later…" enterkeyhint="done">
         <button type="submit">Add</button>
       </form>
       <div class="card">
         <div class="h">To do today <span class="ct" data-today-ct>0</span></div>
         <div data-today-list></div>
+      </div>
+      <div class="card" data-holding-card hidden>
+        <div class="h">To sort <span class="ct" data-holding-ct></span></div>
+        <div class="note">Captured here — prioritise on the Hub, or send one straight to today.</div>
+        <div data-holding-list></div>
       </div>
       <div class="card meds-card">
         <div class="h">Meds &amp; habits today</div>
@@ -224,7 +232,7 @@
   function saveCache(){ try{ lsSet(CACHE_KEY, JSON.stringify(cached)); }catch(_){ } }
   function ensureShape(st){ if(!st||typeof st!=='object') return st; if(!st.focus||typeof st.focus!=='object') st.focus={items:[]}; if(!Array.isArray(st.focus.items)) st.focus.items=[]; if(!Array.isArray(st.todos)) st.todos=[]; if(!Array.isArray(st.events)) st.events=[]; if(st.scratchDump===undefined) st.scratchDump=(typeof st.brainDump==='string'?st.brainDump:''); if(typeof st.scratchDump!=='string') st.scratchDump=''; if(!Array.isArray(st.changeIdeas)) st.changeIdeas=[]; if(!st.dailyChecks||typeof st.dailyChecks!=='object') st.dailyChecks={}; return st; }
   function applyOp(st, op){ ensureShape(st); var t=today();
-    if(op.t==='cap'){ if(!st.focus.items.some(function(x){return x.id===op.id;})) st.focus.items.push({id:op.id,text:op.text,bucket:'today',created:op.at}); }
+    if(op.t==='cap'){ if(!st.focus.items.some(function(x){return x.id===op.id;})) st.focus.items.push({id:op.id,text:op.text,bucket:'unsorted',created:op.at}); }
     else if(op.t==='tf'){ var it=st.focus.items.find(function(x){return x.id===op.id;}); if(it){ it.done=true; it.doneAt=op.at; } }
     else if(op.t==='td'){ (st.todos||[]).forEach(function(td){ if(!td.checked && td.day && td.day<=t && ((td.realm||'')+'|'+String(td.text||'').toLowerCase().trim())===op.key) td.checked=true; }); }
     else if(op.t==='med'){ if(!st.dailyChecks[op.date]) st.dailyChecks[op.date]={}; st.dailyChecks[op.date][op.key]=op.val; }
@@ -234,6 +242,8 @@
     else if(op.t==='icd'){ st.changeIdeas=st.changeIdeas.filter(function(x){return !x.done;}); }
     else if(op.t==='bd'){ st.scratchDump=op.text; }
     else if(op.t==='pin'){ var pf=st.focus.items.find(function(x){return x.id===op.id;}); if(pf){ pf.pinnedAt=op.ms; } }
+    else if(op.t==='bk'){ var bi=st.focus.items.find(function(x){return x.id===op.id;}); if(bi){ bi.bucket=op.bucket; } }
+    else if(op.t==='fdl'){ st.focus.items=st.focus.items.filter(function(x){return x.id!==op.id;}); }
     return st;
   }
   function enqueue(op, opts){ opts=opts||{};
@@ -310,10 +320,11 @@
     var tf=e.target.closest && e.target.closest('[data-tick-focus]'); if(tf){ tf.classList.add('on'); enqueue({t:'tf',id:tf.getAttribute('data-tick-focus'),at:new Date().toISOString()},{haptic:true}); return; }
     var tdb=e.target.closest && e.target.closest('[data-tick-due]'); if(tdb){ tdb.classList.add('on'); enqueue({t:'td',key:tdb.getAttribute('data-tick-due'),at:new Date().toISOString()},{haptic:true}); return; }
     var md=e.target.closest && e.target.closest('[data-med]'); if(md){ enqueue({t:'med',date:today(),key:md.getAttribute('data-med'),val:!md.classList.contains('on'),at:new Date().toISOString()},{haptic:true}); return; }
+    var ptd=e.target.closest && e.target.closest('[data-promote-today]'); if(ptd){ enqueue({t:'bk',id:ptd.getAttribute('data-promote-today'),bucket:'today',at:new Date().toISOString()},{haptic:true}); return; }
+    var ffd=e.target.closest && e.target.closest('[data-focus-del]'); if(ffd){ enqueue({t:'fdl',id:ffd.getAttribute('data-focus-del'),at:new Date().toISOString()}); return; }
     var itk=e.target.closest && e.target.closest('[data-ci-tick]'); if(itk){ var id=itk.getAttribute('data-ci-tick'); var cur=(cached&&cached.changeIdeas||[]).find(function(x){return x.id===id;}); enqueue({t:'it',id:id,val:!(cur&&cur.done),at:new Date().toISOString()},{haptic:true}); return; }
     var idl=e.target.closest && e.target.closest('[data-ci-del]'); if(idl){ enqueue({t:'idl',id:idl.getAttribute('data-ci-del'),at:new Date().toISOString()}); return; }
     var icd=e.target.closest && e.target.closest('[data-ci-clear-done]'); if(icd){ enqueue({t:'icd',at:new Date().toISOString()}); return; }
-    var wt=e.target.closest && e.target.closest('[data-week-toggle]'); if(wt){ weekExpanded=!weekExpanded; renderDiary(); return; }
     var st=e.target.closest && e.target.closest('[data-status]'); if(st){ refresh(); return; }
     var nv=e.target.closest && e.target.closest('[data-nav]'); if(nv){ navTo(nv.getAttribute('data-nav')); return; }
   });
@@ -419,10 +430,10 @@
     for(var ni=0;ni<tev.length;ni++){ var sm=(tev[ni].start&&/^\d\d:\d\d$/.test(tev[ni].start))?(+tev[ni].start.slice(0,2)*60+ +tev[ni].start.slice(3)):-1; if(sm>nowMin){ nx=tev[ni]; break; } }
     if(nx) html+='<div class="nextbanner">Next \u00b7 '+esc(nx.start)+' \u2014 '+esc(nx.title||'')+'</div>';
     html+=days.map(function(d){ return dayBlock(d,cached,d===t); }).join('');
-    // next week (collapsed)
+    // next week — always shown; page/scroll down to reach it. Read-only: the Hub stays the only place to input calendars.
     var nextMon=addDays(mon,7);
-    if(weekExpanded){ for(var j=0;j<7;j++){ var nd=addDays(nextMon,j); html+=dayBlock(nd,cached,false); } html+='<button class="moreweek" data-week-toggle>Hide next week</button>'; }
-    else { html+='<button class="moreweek" data-week-toggle>Show next week ▾</button>'; }
+    html+='<div class="weekdiv">Next week</div>';
+    for(var j=0;j<7;j++){ var nd=addDays(nextMon,j); html+=dayBlock(nd,cached,false); }
     el.innerHTML=html;
   }
 
@@ -465,10 +476,20 @@
     var ct=$('[data-today-ct]'); if(ct) ct.textContent=(d.chosen.length+d.due.length);
   }
 
+  function renderHolding(){
+    var card=$('[data-holding-card]'), list=$('[data-holding-list]'); if(!card||!list||!cached) return; ensureShape(cached);
+    var items=cached.focus.items.filter(function(it){return it&&it.bucket==='unsorted'&&!it.done;});
+    var ct=$('[data-holding-ct]'); if(ct) ct.textContent=items.length?(items.length+''):'';
+    if(!items.length){ card.hidden=true; list.innerHTML=''; return; }
+    card.hidden=false;
+    list.innerHTML=items.map(function(it){
+      return '<div class="todo"><span class="tx">'+esc(it.text)+'</span><button class="totoday" data-promote-today="'+esc(it.id)+'">→ Today</button><button class="del" data-focus-del="'+esc(it.id)+'">✕</button></div>';
+    }).join('');
+  }
   function renderAll(){
     if(!cached) return;
     var sub=$('[data-datesub]'); if(sub) sub.textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-    renderRightNow(); renderToday(); renderMeds(); renderDiary(); renderNotes(); renderWeatherFlag();
+    renderRightNow(); renderToday(); renderHolding(); renderMeds(); renderDiary(); renderNotes(); renderWeatherFlag();
   }
 
   // (Removed: dead duplicate submit/click handlers that called an undefined
