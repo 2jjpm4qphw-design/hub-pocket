@@ -238,7 +238,7 @@
     return st; }
   function applyOp(st, op){ ensureShape(st); var t=today();
     if(op.t==='cap'){ if(!st.focus.items.some(function(x){return x.id===op.id;})) st.focus.items.push({id:op.id,text:op.text,bucket:'unsorted',created:op.at}); }
-    else if(op.t==='tf'){ var it=st.focus.items.find(function(x){return x.id===op.id;}); if(it){ it.done=true; it.doneAt=op.at; } }
+    else if(op.t==='tf'){ var it=st.focus.items.find(function(x){return x.id===op.id;}); if(it){ it.done=true; it.doneAt=op.at; if(it.dueKey){ var _t=today(); (st.todos||[]).forEach(function(td){ if(!td.checked && td.day && td.day<=_t && ((td.realm||'')+'|'+String(td.text||'').toLowerCase().trim())===it.dueKey) td.checked=true; }); } } }
     else if(op.t==='td'){ (st.todos||[]).forEach(function(td){ if(!td.checked && td.day && td.day<=t && ((td.realm||'')+'|'+String(td.text||'').toLowerCase().trim())===op.key) td.checked=true; }); }
     else if(op.t==='med'){ if(!st.dailyChecks[op.date]) st.dailyChecks[op.date]={}; st.dailyChecks[op.date][op.key]=op.val; }
     else if(op.t==='ia'){ if(!st.changeIdeas.some(function(x){return x.id===op.id;})) st.changeIdeas.push({id:op.id,text:op.text,done:false,created:op.at}); }
@@ -249,6 +249,7 @@
     else if(op.t==='pin'){ var pf=st.focus.items.find(function(x){return x.id===op.id;}); if(pf){ pf.pinnedAt=op.ms; } }
     else if(op.t==='bk'){ var bi=st.focus.items.find(function(x){return x.id===op.id;}); if(bi){ bi.bucket=op.bucket; } }
     else if(op.t==='fdl'){ st.deletions=st.deletions||{}; st.deletions[op.id]=op.at||Date.now(); st.focus.items=st.focus.items.filter(function(x){return x.id!==op.id;}); }
+    else if(op.t==='pind'){ var _ex=st.focus.items.find(function(x){return x&&x.dueKey===op.key&&!x.done;}); if(_ex){ _ex.pinnedAt=op.ms; } else if(!st.focus.items.some(function(x){return x.id===op.id;})){ st.focus.items.push({id:op.id,text:op.text,bucket:'today',pinnedAt:op.ms,created:op.at,dueKey:op.key}); } }
     return st;
   }
   function enqueue(op, opts){ opts=opts||{};
@@ -453,10 +454,12 @@
     var t=today();
     var focus=(state.focus&&Array.isArray(state.focus.items))?state.focus.items:[];
     var chosen=focus.filter(function(it){ return it && it.bucket==='today' && !it.done; }).sort(focusOrder);
+    var promoted={}; focus.forEach(function(it){ if(it&&it.dueKey&&!it.done) promoted[it.dueKey]=1; });
     var seen={}, due=[];
     (state.todos||[]).forEach(function(td){
       if(td.checked||!td.day||td.day>t) return;
       var k=(td.realm||'')+'|'+String(td.text||'').toLowerCase().trim();
+      if(promoted[k]) return;
       if(seen[k]){ if(td.day<seen[k].day) seen[k].day=td.day; return; }
       seen[k]={text:td.text,realm:td.realm,day:td.day,key:k}; due.push(seen[k]);
     });
@@ -467,8 +470,8 @@
     var el=$('[data-today-list]'); if(!el||!cached) return;
     var t=today(); var d=todayItems(cached);
     var html='';
+    if((d.chosen.length+d.due.length)>1) html+='<div class="swipehint">Swipe any task left to make it your Right Now.</div>';
     if(d.chosen.length){
-      if(d.chosen.length>1) html+='<div class="swipehint">Swipe a task left to make it your Right Now.</div>';
       html+=d.chosen.map(function(it,i){
         var flag=(i===0 && (+it.pinnedAt||0)>0)?'<span class="pinflag">now</span>':'';
         return '<div class="todo swipeable" data-todo-id="'+esc(it.id)+'"><span class="box" data-tick-focus="'+esc(it.id)+'"></span><span class="tx">'+esc(it.text)+'</span>'+flag+'</div>';
@@ -479,7 +482,7 @@
         var over=(td.day<t);
         var tag=(td.realm==='work')?'<span class="tag work">work</span>':'<span class="tag">diary</span>';
         if(over) tag='<span class="tag over">overdue</span>'+tag;
-        return '<div class="todo"><span class="box" data-tick-due="'+esc(td.key)+'"></span><span class="tx">'+esc(td.text)+'</span>'+tag+'</div>';
+        return '<div class="todo swipeable" data-due-key="'+esc(td.key)+'" data-due-text="'+esc(td.text)+'"><span class="box" data-tick-due="'+esc(td.key)+'"></span><span class="tx">'+esc(td.text)+'</span>'+tag+'</div>';
       }).join('');
     }
     if(!html) html='<div class="empty">Nothing for today. Add one above, or pick your focus items on The Hub.</div>';
@@ -549,12 +552,13 @@
 
   // ---- swipe-to-pin: drag a today task left to make it the Right Now ----
   function pinFocus(id){ if(!id) return; enqueue({t:'pin',id:id,ms:Date.now(),at:new Date().toISOString()},{haptic:true}); }
+  function promoteDue(key,text){ if(!key) return; enqueue({t:'pind',id:uid('f'),key:key,text:text||'',ms:Date.now(),at:new Date().toISOString()},{haptic:true}); }
   function setupSwipe(){
-    var startX=0,startY=0,dragging=false,horiz=false,row=null,rid=null;
+    var startX=0,startY=0,dragging=false,horiz=false,row=null,rid=null,rdk=null,rdt=null;
     function pt(e){ return (e.touches&&e.touches[0])?e.touches[0]:e; }
     document.addEventListener('touchstart',function(e){
-      var t=e.target.closest && e.target.closest('.todo.swipeable[data-todo-id]'); if(!t) return;
-      var p=pt(e); startX=p.clientX; startY=p.clientY; dragging=true; horiz=false; row=t; rid=t.getAttribute('data-todo-id');
+      var t=e.target.closest && e.target.closest('.todo.swipeable'); if(!t) return;
+      var p=pt(e); startX=p.clientX; startY=p.clientY; dragging=true; horiz=false; row=t; rid=t.getAttribute('data-todo-id'); rdk=t.getAttribute('data-due-key'); rdt=t.getAttribute('data-due-text');
     },{passive:true});
     document.addEventListener('touchmove',function(e){
       if(!dragging||!row) return; var p=pt(e); var dx=p.clientX-startX, dy=p.clientY-startY;
@@ -562,7 +566,7 @@
       if(e.cancelable) e.preventDefault();
       var tx=Math.min(0,dx); row.style.transform='translateX('+tx+'px)'; row.classList.toggle('willpin', dx<=-70);
     },{passive:false});
-    function end(){ if(!dragging) return; var commit=!!(row&&row.classList.contains('willpin')); if(row){ row.style.transform=''; row.classList.remove('willpin'); } var id=rid; dragging=false; horiz=false; row=null; rid=null; if(commit&&id) pinFocus(id); }
+    function end(){ if(!dragging) return; var commit=!!(row&&row.classList.contains('willpin')); if(row){ row.style.transform=''; row.classList.remove('willpin'); } var id=rid, dk=rdk, dt=rdt; dragging=false; horiz=false; row=null; rid=null; rdk=null; rdt=null; if(commit){ if(id) pinFocus(id); else if(dk) promoteDue(dk,dt); } }
     document.addEventListener('touchend',end,{passive:true});
     document.addEventListener('touchcancel',end,{passive:true});
   }
