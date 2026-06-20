@@ -106,6 +106,10 @@
   .totoday:active{background:#ffe6fb}
   .donetoday{margin-top:10px;font-size:13px;font-weight:600;color:var(--green);text-align:center}
   .nudge{background:#fff7e6;border:1px solid #f0d9a8;color:#7a5a12;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:600;margin-bottom:12px}
+  .realmtag{flex:none;border:1px solid var(--hair);background:#f3f3f7;color:var(--muted);border-radius:6px;padding:3px 8px;font:inherit;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;align-self:center}
+  .realmtag.work{background:#e7eefc;color:var(--blue);border-color:#cfe0fb}
+  .hwtoggle{width:100%;border:1px solid var(--hair);background:#fff;color:var(--muted);border-radius:12px;padding:9px;font:inherit;font-size:13px;font-weight:600;margin-bottom:14px}
+  .hwtoggle[data-on="1"]{background:#fff4f2;border-color:#f3c9c2;color:#a23a2a}
   /* right-now actions + focus mode */
   .rn-actions{display:flex;gap:10px;align-items:center}
   .rn-focus{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.32);border-radius:10px;padding:10px 18px;font:inherit;font-size:15px;font-weight:700}
@@ -139,6 +143,7 @@
         <input type="text" data-cap-input placeholder="Capture a to-do — sort later…" enterkeyhint="done">
         <button type="submit">Add</button>
       </form>
+      <button class="hwtoggle" data-hidework hidden></button>
       <div class="card">
         <div class="h">To do today <span class="ct" data-today-ct>0</span></div>
         <div data-today-list></div>
@@ -237,7 +242,7 @@
     var _del=st.deletions; if(_del){ st.focus.items=st.focus.items.filter(function(x){return !(x&&_del[x.id]);}); st.changeIdeas=st.changeIdeas.filter(function(x){return !(x&&_del[x.id]);}); st.todos=st.todos.filter(function(x){return !(x&&_del[x.id]);}); }
     return st; }
   function applyOp(st, op){ ensureShape(st); var t=today();
-    if(op.t==='cap'){ if(!st.focus.items.some(function(x){return x.id===op.id;})) st.focus.items.push({id:op.id,text:op.text,bucket:'unsorted',created:op.at}); }
+    if(op.t==='cap'){ if(!st.focus.items.some(function(x){return x.id===op.id;})) st.focus.items.push({id:op.id,text:op.text,bucket:'unsorted',realm:'personal',created:op.at}); }
     else if(op.t==='tf'){ var it=st.focus.items.find(function(x){return x.id===op.id;}); if(it){ it.done=true; it.doneAt=op.at; if(it.dueKey){ var _t=today(); (st.todos||[]).forEach(function(td){ if(!td.checked && td.day && td.day<=_t && ((td.realm||'')+'|'+String(td.text||'').toLowerCase().trim())===it.dueKey) td.checked=true; }); } } }
     else if(op.t==='td'){ (st.todos||[]).forEach(function(td){ if(!td.checked && td.day && td.day<=t && ((td.realm||'')+'|'+String(td.text||'').toLowerCase().trim())===op.key) td.checked=true; }); }
     else if(op.t==='med'){ if(!st.dailyChecks[op.date]) st.dailyChecks[op.date]={}; st.dailyChecks[op.date][op.key]=op.val; }
@@ -249,7 +254,8 @@
     else if(op.t==='pin'){ var pf=st.focus.items.find(function(x){return x.id===op.id;}); if(pf){ pf.pinnedAt=op.ms; } }
     else if(op.t==='bk'){ var bi=st.focus.items.find(function(x){return x.id===op.id;}); if(bi){ bi.bucket=op.bucket; } }
     else if(op.t==='fdl'){ st.deletions=st.deletions||{}; st.deletions[op.id]=op.at||Date.now(); st.focus.items=st.focus.items.filter(function(x){return x.id!==op.id;}); }
-    else if(op.t==='pind'){ var _ex=st.focus.items.find(function(x){return x&&x.dueKey===op.key&&!x.done;}); if(_ex){ _ex.pinnedAt=op.ms; } else if(!st.focus.items.some(function(x){return x.id===op.id;})){ st.focus.items.push({id:op.id,text:op.text,bucket:'today',pinnedAt:op.ms,created:op.at,dueKey:op.key}); } }
+    else if(op.t==='pind'){ var _ex=st.focus.items.find(function(x){return x&&x.dueKey===op.key&&!x.done;}); if(_ex){ _ex.pinnedAt=op.ms; } else if(!st.focus.items.some(function(x){return x.id===op.id;})){ st.focus.items.push({id:op.id,text:op.text,bucket:'today',pinnedAt:op.ms,created:op.at,dueKey:op.key,realm:op.realm||'personal'}); } }
+    else if(op.t==='rl'){ var _ri=st.focus.items.find(function(x){return x.id===op.id;}); if(_ri){ _ri.realm=op.realm; } }
     return st;
   }
   function enqueue(op, opts){ opts=opts||{};
@@ -287,8 +293,14 @@
   // pinnedAt is a NUMBER so the Hub's union-merge resolves clashes by taking the
   // later one — i.e. whatever was pinned most recently on either device wins.
   function focusOrder(a,b){ var pa=+(a&&a.pinnedAt)||0, pb=+(b&&b.pinnedAt)||0; if(pa!==pb) return pb-pa; return String((a&&a.created)||'').localeCompare(String((b&&b.created)||'')); }
+  // Weekend work-hiding: auto-on Sat/Sun; a one-tap override that lasts the day. Per-device (view pref, not synced).
+  var HW_KEY='connolly-pocket:hidework';
+  function isWeekend(){ var d=new Date().getDay(); return d===0||d===6; }
+  function hideWorkActive(){ try{ var o=JSON.parse(lsGet(HW_KEY)||'null'); if(o&&o.date===today()) return !!o.value; }catch(_){ } return isWeekend(); }
+  function hwSet(v){ lsSet(HW_KEY, JSON.stringify({date:today(), value:!!v})); }
+  function showByRealm(realm){ return !(hideWorkActive() && realm==='work'); }
   function renderRightNow(){ var el=$('[data-rightnow]'); if(!el||!cached){ return; } ensureShape(cached);
-    var f=cached.focus.items.filter(function(it){return it&&it.bucket==='today'&&!it.done;}).sort(focusOrder);
+    var f=cached.focus.items.filter(function(it){return it&&it.bucket==='today'&&!it.done&&showByRealm(it.realm);}).sort(focusOrder);
     if(!f.length){ el.hidden=true; el.innerHTML=''; return; }
     el.hidden=false; el.innerHTML='<div class="rn-label">Right now</div><div class="rn-text">'+esc(f[0].text)+'</div><div class="rn-actions"><button class="rn-done" data-tick-focus="'+esc(f[0].id)+'">Done</button><button class="rn-focus" data-focus-enter>Focus</button></div>';
   }
@@ -334,6 +346,8 @@
     var md=e.target.closest && e.target.closest('[data-med]'); if(md){ enqueue({t:'med',date:today(),key:md.getAttribute('data-med'),val:!md.classList.contains('on'),at:new Date().toISOString()},{haptic:true}); return; }
     var ptd=e.target.closest && e.target.closest('[data-promote-today]'); if(ptd){ enqueue({t:'bk',id:ptd.getAttribute('data-promote-today'),bucket:'today',at:new Date().toISOString()},{haptic:true}); return; }
     var ffd=e.target.closest && e.target.closest('[data-focus-del]'); if(ffd){ enqueue({t:'fdl',id:ffd.getAttribute('data-focus-del'),at:new Date().toISOString()}); return; }
+    var rtg=e.target.closest && e.target.closest('[data-realm-toggle]'); if(rtg){ var _rid=rtg.getAttribute('data-realm-toggle'); var _rcur=(cached&&cached.focus&&cached.focus.items||[]).find(function(x){return x.id===_rid;}); enqueue({t:'rl',id:_rid,realm:(_rcur&&_rcur.realm==='work')?'personal':'work',at:new Date().toISOString()},{haptic:true}); return; }
+    var hwb=e.target.closest && e.target.closest('[data-hidework]'); if(hwb){ hwSet(!hideWorkActive()); renderAll(); return; }
     var itk=e.target.closest && e.target.closest('[data-ci-tick]'); if(itk){ var id=itk.getAttribute('data-ci-tick'); var cur=(cached&&cached.changeIdeas||[]).find(function(x){return x.id===id;}); enqueue({t:'it',id:id,val:!(cur&&cur.done),at:new Date().toISOString()},{haptic:true}); return; }
     var idl=e.target.closest && e.target.closest('[data-ci-del]'); if(idl){ enqueue({t:'idl',id:idl.getAttribute('data-ci-del'),at:new Date().toISOString()}); return; }
     var icd=e.target.closest && e.target.closest('[data-ci-clear-done]'); if(icd){ enqueue({t:'icd',at:new Date().toISOString()}); return; }
@@ -453,11 +467,12 @@
   function todayItems(state){
     var t=today();
     var focus=(state.focus&&Array.isArray(state.focus.items))?state.focus.items:[];
-    var chosen=focus.filter(function(it){ return it && it.bucket==='today' && !it.done; }).sort(focusOrder);
+    var chosen=focus.filter(function(it){ return it && it.bucket==='today' && !it.done && showByRealm(it.realm); }).sort(focusOrder);
     var promoted={}; focus.forEach(function(it){ if(it&&it.dueKey&&!it.done) promoted[it.dueKey]=1; });
     var seen={}, due=[];
     (state.todos||[]).forEach(function(td){
       if(td.checked||!td.day||td.day>t) return;
+      if(!showByRealm(td.realm)) return;
       var k=(td.realm||'')+'|'+String(td.text||'').toLowerCase().trim();
       if(promoted[k]) return;
       if(seen[k]){ if(td.day<seen[k].day) seen[k].day=td.day; return; }
@@ -474,7 +489,8 @@
     if(d.chosen.length){
       html+=d.chosen.map(function(it,i){
         var flag=(i===0 && (+it.pinnedAt||0)>0)?'<span class="pinflag">now</span>':'';
-        return '<div class="todo swipeable" data-todo-id="'+esc(it.id)+'"><span class="box" data-tick-focus="'+esc(it.id)+'"></span><span class="tx">'+esc(it.text)+'</span>'+flag+'</div>';
+        var rp='<button class="realmtag'+(it.realm==='work'?' work':'')+'" data-realm-toggle="'+esc(it.id)+'">'+(it.realm==='work'?'work':'personal')+'</button>';
+        return '<div class="todo swipeable" data-todo-id="'+esc(it.id)+'"><span class="box" data-tick-focus="'+esc(it.id)+'"></span><span class="tx">'+esc(it.text)+'</span>'+rp+flag+'</div>';
       }).join('');
     }
     if(d.due.length){
@@ -498,16 +514,17 @@
     if(!items.length){ card.hidden=true; list.innerHTML=''; return; }
     card.hidden=false;
     list.innerHTML=items.map(function(it){
-      return '<div class="todo"><span class="tx">'+esc(it.text)+'</span><button class="totoday" data-promote-today="'+esc(it.id)+'">→ Today</button><button class="del" data-focus-del="'+esc(it.id)+'">✕</button></div>';
+      return '<div class="todo"><span class="tx">'+esc(it.text)+'</span><button class="realmtag'+(it.realm==='work'?' work':'')+'" data-realm-toggle="'+esc(it.id)+'">'+(it.realm==='work'?'work':'personal')+'</button><button class="totoday" data-promote-today="'+esc(it.id)+'">→ Today</button><button class="del" data-focus-del="'+esc(it.id)+'">✕</button></div>';
     }).join('');
   }
   function doneTodayCount(){ if(!cached||!cached.focus||!Array.isArray(cached.focus.items)) return 0; var t=today(); return cached.focus.items.filter(function(it){ return it&&it.done&&it.doneAt&&isoOf(new Date(it.doneAt))===t; }).length; }
   function renderEveningNudge(){ var el=$('[data-evening-nudge]'); if(!el) return; if(!cached){ el.innerHTML=''; return; } var c=medsCountFor(today()); if(new Date().getHours()>=18 && c<MEDS.length){ el.innerHTML='<div class="nudge">🌙 Evening check — '+c+'/'+MEDS.length+' meds &amp; habits done</div>'; } else el.innerHTML=''; }
+  function renderHideWork(){ var b=$('[data-hidework]'); if(!b) return; var on=hideWorkActive(); b.hidden=false; b.setAttribute('data-on', on?'1':'0'); b.textContent = on ? '🚫 Hiding work — tap to show' : 'Showing all — tap to hide work'; }
   function renderAll(){
     if(!cached) return;
     ensureShape(cached);
     var sub=$('[data-datesub]'); if(sub) sub.textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-    renderRightNow(); renderToday(); renderHolding(); renderMeds(); renderEveningNudge(); renderDiary(); renderNotes(); renderWeatherFlag();
+    renderRightNow(); renderToday(); renderHolding(); renderHideWork(); renderMeds(); renderEveningNudge(); renderDiary(); renderNotes(); renderWeatherFlag();
   }
 
   // (Removed: dead duplicate submit/click handlers that called an undefined
