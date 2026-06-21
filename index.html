@@ -598,7 +598,7 @@
 
   // ---- focus mode: full-screen single task, no distractions (phone-only view) ----
   var _focusId=null;
-  function currentFocus(){ if(!cached) return null; ensureShape(cached); var f=cached.focus.items.filter(function(it){return it&&it.bucket==='today'&&!it.done;}).sort(focusOrder); return f[0]||null; }
+  function currentFocus(){ if(!cached) return null; ensureShape(cached); var f=cached.focus.items.filter(function(it){return it&&it.bucket==='today'&&!it.done&&showByRealm(it.realm);}).sort(focusOrder); return f[0]||null; }
   function exitFocus(){ _focusId=null; var fm=$('#focusmode'); if(fm) fm.hidden=true; }
   function setupFocusMode(){
     document.addEventListener('click',function(e){
