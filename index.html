@@ -7,18 +7,23 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Hub Pocket">
-<meta name="theme-color" content="#080A51">
+<meta name="theme-color" content="#0D1B3E">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>Hub Pocket</title>
-<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAET0lEQVR4nO3d3W0UURAF4WPEAyIE4iEBR0oCxEMa8AALxsZmd+fndlfX9whCuuupafVg2fPw4ePj90gQ71YfQNqTQQvFoIVi0EIxaKEYtFAMWigGLRSDFopBC8WghWLQQjFooRi0UAxaKAYtFIMWikELxaCFYtBCMWihGLRQDFooBi0UgxaKQQvFoIVi0EIxaKEYtFAMWigGLRSDFsr71QdQTV+/fXnxZ58/PS44yW0efCWFnvpXyM9VDtugleS6kJ+rGLY7tO6Kecu/O5JBD1cxyi0MerA9Yq52Qxi0UAx6qD0na6UpbdADVQpwbwY9DDnmxKAFY9CD0KdzYtBjHBlzpe8YGvQAEybzhUFrk0rTOTFovEnTOTFotKNjrjadE4PGmhhzYtBI09aMpwxaN6s6nRODxpm6alwYNMj0mBODxpi8Nz9l0LpKh+mcGDSCq8YfBt2cMf/NoBtzb37JoJs6I+Zu0zkxaL2iY8yJQbfk3vw6g27GmN9m0I34EPh/Bq3fuk/nxKDbcNW4jkE3YMzXM+ji3JtvY9DDkaZzYtCluWrczqCLMub7lHytW9dXiu3FmO9XKui3LuTl78gXI/EhcKsSQd9yEaeEfRT61235Dk16pdhWrhrbLQ96C1LUxryPpUETXyt2D8JnqKL1hL4wiLdNmc7JwqD3jrBr1K4a+0JM6K6MeX+ooDtN6U5n7QQVdNIjFH9i+zi4oJMeUR9paszJwqCP/qJXjdq9+VjICX1RLWpjPt7SoM+4AFWirnIOOvSEvpgQk9P5p+VBn3UhVkbtqnGe5UEn7KiN+Vwlgk6YF2bCqlNNmaCTWQ+JeyAOga1KBZ1wonbVWKNc0Gc5MjhjXqdk0J0fEo15rZJBJz2jJu3nXZUNOukZ9ZGczv9XOuikT9SuGjWUDzqpH7Ux19Ei6KRu1F3WlSnaBJ3MnFQTP/MWrYJOan3jxVWjnnZBJzWiNuaaWgZ9lteidW+uq23Qqx4S/Ynt2toGndT9n48tjHmbhw8fH7+vPsRWlBXAmLdrPaEvCCEQPkMFiKATg9BPmKCTvlF3PXdFqKCTfnF0O291uKCTPpF0OWcnyKATY5kKG3R13nDHQAddNZqq5yJAB53Ui6faeWjwQSd1IqpyDrIRQSfGNMWYoJO1UXtDnWNU0MmasIz5POOCTs4NzJjPNTLoxNCoxgadHB+1N835Rgd9JGNeY3zQR4RnzOuMDzoxQBKD/mWvqL051jLoJ7bGaMzrGfQz90ZpzDUgfo3BUa759QiGXItBX+FfYRtyTQYtFHdooRi0UAxaKAYtFIMWikELxaCFYtBCMWihGLRQDFooBi0UgxaKQQvFoIVi0EIxaKEYtFAMWigGLRSDFopBC8WghWLQQjFooRi0UAxaKAYtFIMWikELxaCFYtBCMWihGLRQDFooBi0UgxaKQQvFoIVi0EIxaKEYtFAMWigGLRSDFopBC8WghfID9K47rJmVFswAAAAASUVORK5CYII=">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAET0lEQVR4nO3dzW0UURBF4WvElggIgRy8J2L25EA8sIABY2MzM/3zqk6dbwlCeuM+XarGsvvhw8fH75Eg3q0+gLQngxaKQQvFoIVi0EIxaKEYtFAMWigGLRSDFopBC8WghWLQQjFooRi0UAxaKAYtFIMWikELxaCFYtBCMWihGLRQDFooBi0UgxaKQQvFoIVi0EIxaKEYtFAMWigGLZT3qw+gmr58+/rizz5/elxwkts8+EoKPfWvkJ+rHLZBK8l1IT9XMWx3aN0V85Z/dySDHq5ilFsY9GB7xFzthjBooRj0UHtO1kpT2qAHqhTg3gx6GHLMiUELxqAHoU/nxKDHODLmSt8xNOgBJkzmC4PWJpWmc2LQeJOmc2LQaEfHXG06JwaNNTHmxKCRpq0ZTxm0blZ1OicGjTN11bgwaJDpMScGjTF5b37KoHWVDtM5MWgEV40/DLo5Y/6bQTfm3vySQTd1RszdpnNi0HpFx5gTg27Jvfl1Bt2MMb/NoBvxIfD/DFq/dZ/OiUG34apxHYNuwJivZ9DFuTffxqCHI03nxKBLc9W4nUEXZcz3Kflat66vFNuLMd+vVNBvXcjL35EvRuJD4FYlgr7lIk4J+yj0r9vyHZr0SrGtXDW2Wx70FqSojXkfS4MmvlbsHoTPUEXrCX1hEG+bMp2ThUHvHWHXqF019oWY0F0Z8/5QQXea0p3O2gkq6KRHKP7E9nFwQSc9oj7S1JiThUEf/UWvGrV787GQE/qiWtTGfLylQZ9xAapEXeUcdOgJfTEhJqfzT8uDPutCrIzaVeM8y4NO2FEb87lKBJ0wL8yEVaeaMkEnsx4S90AcAluVCjrhRO2qsUa5oM9yZHDGvE7JoDs/JBrzWiWDTnpGTdrPuyobdNIz6iM5nf+vdNBJn6hdNWooH3RSP2pjrqNF0EndqLusK1O0CTqZOakmfuYtWgWd1PrGi6tGPe2CTmpEbcw1tQz6LK9F695cV9ugVz0k+hPbtbUNOqn7Px9bGPM2Dx8+Pn5ffYitKCuAMW/XekJfEEIgfIYKEEEnBqGfMEEnfaPueu6KUEEn/eLodt7qcEEnfSLpcs5OkEEnxjIVNujqvOGOgQ66ajRVz0WADjqpF0+189Dgg07qRFTlHGQjgk6MaYoxQSdro/aGOseooJM1YRnzecYFnZwbmDGfa2TQiaFRjQ06OT5qb5rzjQ76SMa8xvigjwjPmNcZH3RigCQG/cteUXtzrGXQT2yN0ZjXM+hn7o3SmGtA/BqDo1zz6xEMuRaDvsK/wjbkmgxaKO7QQjFooRi0UAxaKAYtFIMWikELxaCFYtBCMWihGLRQDFooBi0UgxaKQQvFoIVi0EIxaKEYtFAMWigGLRSDFopBC8WghWLQQjFooRi0UAxaKAYtFIMWikELxaCFYtBCMWihGLRQDFooBi0UgxaKQQvFoIVi0EIxaKEYtFAMWigGLRSDFopBC+UH+fQ74q5bdawAAAAASUVORK5CYII=">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  :root{--navy:#080A51;--pink:#C4F000;--cream:#FBF7EF;--ink:#1d1d28;--muted:#7a7a88;--hair:#e6e6ee;--card:#ffffff;--green:#1f9d63;--blue:#1d4ed8;}
+  :root{--navy:#0D1B3E;--pink:#C4F000;--cream:#FBF7EF;--ink:#1d1d28;--muted:#7a7a88;--hair:#e6e6ee;--card:#ffffff;--green:#1f9d63;--blue:#1d4ed8;}
   html,body{margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#f3f3f7;color:var(--ink);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;padding-bottom:env(safe-area-inset-bottom)}
+  body{font-family:'Montserrat',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#f3f3f7;color:var(--ink);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;padding-bottom:env(safe-area-inset-bottom)}
   header{position:sticky;top:0;z-index:10;background:var(--navy);color:var(--cream);padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-  header .ttl{font-weight:700;font-size:18px;letter-spacing:.01em}
+  header .ttl{font-weight:800;font-size:18px;letter-spacing:-.01em;color:var(--pink)}
   header .sub{font-size:11px;opacity:.7;font-weight:500}
+  .statuswrap{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .savedat{font-size:10px;opacity:.6;color:var(--cream);font-weight:500}
   .pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:var(--cream);cursor:pointer}
   .pill .dot{width:8px;height:8px;border-radius:50%;background:#bbb}
   .pill[data-s="synced"] .dot{background:#5ed39a}
@@ -78,7 +83,7 @@
   .setup .err{color:#c0392b;font-size:13px;margin-top:12px}
   .setup .signout{width:100%;border:1px solid var(--hair);background:#fff;color:#c0392b;border-radius:12px;padding:13px;font:inherit;font-size:15px;font-weight:600;margin-top:10px}
   .hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4}
-  .rightnow{background:linear-gradient(135deg,#080A51,#23267a);color:#fff;border-radius:16px;padding:16px;margin-bottom:14px}
+  .rightnow{background:linear-gradient(135deg,#0D1B3E,#1A3A6B);color:#fff;border-radius:16px;padding:16px;margin-bottom:14px}
   .rn-label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--pink);font-weight:700;margin-bottom:8px}
   .rn-text{font-size:20px;font-weight:600;line-height:1.3;margin-bottom:14px}
   .rn-done{background:var(--pink);color:var(--navy);border:0;border-radius:10px;padding:10px 22px;font:inherit;font-size:15px;font-weight:700}
@@ -115,7 +120,7 @@
   .rn-actions{display:flex;gap:10px;align-items:center}
   .rn-focus{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.32);border-radius:10px;padding:10px 18px;font:inherit;font-size:15px;font-weight:700}
   .rn-focus:active{background:rgba(255,255,255,.26)}
-  .focusmode{position:fixed;inset:0;z-index:50;background:linear-gradient(160deg,#080A51,#23267a);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:calc(env(safe-area-inset-top) + 28px) 26px calc(env(safe-area-inset-bottom) + 28px)}
+  .focusmode{position:fixed;inset:0;z-index:50;background:linear-gradient(160deg,#0D1B3E,#1A3A6B);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:calc(env(safe-area-inset-top) + 28px) 26px calc(env(safe-area-inset-bottom) + 28px)}
   .focusmode[hidden]{display:none}
   .fm-label{font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:var(--pink);font-weight:700;margin-bottom:22px}
   .fm-text{font-size:30px;font-weight:600;line-height:1.32;max-width:600px;margin-bottom:44px}
@@ -132,7 +137,10 @@
       <div class="ttl">Hub Pocket</div>
       <div class="sub" data-datesub></div>
     </div>
-    <button class="pill" data-status data-s="idle"><span class="dot"></span><span data-status-label>idle</span></button>
+    <div class="statuswrap">
+      <button class="pill" data-status data-s="idle"><span class="dot"></span><span data-status-label>idle</span></button>
+      <div class="savedat" data-savedat></div>
+    </div>
   </header>
 
   <main>
@@ -267,7 +275,7 @@
     pending.push(op); ensureShape(cached); applyOp(cached, op); saveCache(); savePending();
     if(!opts.skipRender) renderAll();
     if(opts.haptic) buzz();
-    flush();
+    setStatus('saving','saving'); scheduleFlush();
   }
   function flush(){
     if(!creds || !pending.length || flushing) return;
@@ -283,14 +291,23 @@
         // state instead of clobbering it. Ops are idempotent, so replay is safe.
         return api('GET').then(function(g){
           if(g && g.updated_at && base && g.updated_at!==base && tries<3){ tries++; return attempt(); }
-          return writeState(state).then(function(){ cached=state; saveCache(); pending=[]; savePending(); renderAll(); setStatus('synced','synced'); });
+          return writeState(state).then(function(){ cached=state; saveCache(); pending=[]; savePending(); renderAll(); setStatus('synced','synced'); markSaved(); });
         });
       });
     }
     attempt().catch(function(e){ setStatus('error', (typeof navigator!=='undefined'&&navigator.onLine===false)?'offline':'error'); console.error(e, e&&e.detail||''); })
       .then(function(){ flushing=false; });
   }
+  // Batch writes: apply optimistically + render instantly, but coalesce the network
+  // save so rapid taps become ONE write. The pending queue persists, so nothing's lost.
+  var flushTimer=null, FLUSH_DELAY=(typeof window!=='undefined' && +window.__flushDelay)||1200;
+  function scheduleFlush(){ if(flushTimer) clearTimeout(flushTimer); flushTimer=setTimeout(function(){ flushTimer=null; flush(); }, FLUSH_DELAY); }
+  function flushNow(){ if(flushTimer){ clearTimeout(flushTimer); flushTimer=null; } flush(); }
   function buzz(){ try{ if(navigator.vibrate) navigator.vibrate(8); }catch(_){ } }
+  // "saved · just now" reassurance — last successful write time, persisted across launches.
+  var SAVED_KEY='connolly-pocket:savedat', lastSavedAt=+(lsGet(SAVED_KEY))||0;
+  function markSaved(){ lastSavedAt=Date.now(); lsSet(SAVED_KEY,String(lastSavedAt)); renderSavedAt(); }
+  function renderSavedAt(){ var el=$('[data-savedat]'); if(!el) return; if(!lastSavedAt){ el.textContent=''; return; } var s=Math.max(0,Math.floor((Date.now()-lastSavedAt)/1000)); el.textContent='saved '+(s<60?'just now':(s<3600?(Math.floor(s/60)+'m ago'):(Math.floor(s/3600)+'h ago'))); }
 
   // ===== extra renders =====
   // Today focus order: most-recently-pinned first (= Right Now), then by creation.
@@ -530,7 +547,7 @@
     if(!cached) return;
     ensureShape(cached);
     var sub=$('[data-datesub]'); if(sub) sub.textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-    renderRightNow(); renderToday(); renderHolding(); renderHideWork(); renderMeds(); renderEveningNudge(); renderDiary(); renderNotes(); renderWeatherFlag();
+    renderRightNow(); renderToday(); renderHolding(); renderHideWork(); renderMeds(); renderEveningNudge(); renderDiary(); renderNotes(); renderWeatherFlag(); renderSavedAt();
   }
 
   // (Removed: dead duplicate submit/click handlers that called an undefined
@@ -618,9 +635,10 @@
   }
 
   // ---- boot ----
-  loadPending(); loadCache(); setupSwipe(); setupFocusMode(); setupPullRefresh();
-  window.addEventListener('online', function(){ if(creds && pending.length){ setStatus('saving','reconnecting'); flush(); } });
-  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible' && creds && pending.length) flush(); });
+  loadPending(); loadCache(); setupSwipe(); setupFocusMode(); setupPullRefresh(); renderSavedAt(); setInterval(renderSavedAt,30000);
+  window.addEventListener('online', function(){ if(creds && pending.length){ setStatus('saving','reconnecting'); flushNow(); } });
+  document.addEventListener('visibilitychange', function(){ if(creds && pending.length) flushNow(); });
+  window.addEventListener('pagehide', function(){ if(creds && pending.length) flushNow(); });
   if(loadCreds()){ openApp(); } else { openSetup(); }
 })();
 </script>
