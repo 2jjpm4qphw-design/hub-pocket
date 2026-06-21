@@ -8,7 +8,7 @@
  *  online load even without a bump — the bump just guarantees old caches are
  *  cleared.)
  */
-var CACHE = 'hub-pocket-v1';
+var CACHE = 'hub-pocket-v2';
 var SHELL = [
   './',
   './index.html',
