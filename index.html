@@ -327,14 +327,17 @@
     if(!f.length){ el.hidden=true; el.innerHTML=''; return; }
     el.hidden=false; el.innerHTML='<div class="rn-label">Right now</div><div class="rn-text">'+esc(f[0].text)+'</div><div class="rn-actions"><button class="rn-done" data-tick-focus="'+esc(f[0].id)+'">Done</button><button class="rn-focus" data-focus-enter>Focus</button></div>';
   }
-  var MEDS=[{key:'sertraline',label:'Sertraline'},{key:'atorvastatin',label:'Atorva'},{key:'cpap',label:'CPAP'},{key:'trelegy',label:'Trelegy'},{key:'avamys',label:'Avamys'},{key:'fexofenadine',label:'Fexo'},{key:'exercise',label:'Exercise'},{key:'weight',label:'Weight'},{key:'linkedin',label:'LinkedIn'}];
-  var STREAK_MIN=6; // a 'good day' = at least this many of the 9 ticked (tweak to taste)
+  var MEDS=[{key:'sertraline',label:'Sertraline'},{key:'atorvastatin',label:'Atorva'},{key:'cpap',label:'CPAP'},{key:'trelegy',label:'Trelegy'},{key:'avamys',label:'Avamys'},{key:'fexofenadine',label:'Fexo'},{key:'exercise',label:'Exercise'},{key:'weight',label:'Weight'},{key:'linkedin',label:'LinkedIn'},{key:'emma',label:'Emma'}];
+  // Daily tracker list: prefer the Hub-published shared list (so new habits auto-sync),
+  // fall back to the built-in MEDS list for first-load / offline / older data.
+  function trackers(){ var t=cached&&cached.trackerDefs; if(Array.isArray(t)&&t.length&&t.every(function(x){return x&&x.key;})) return t; return MEDS; }
+  var STREAK_MIN=6; // a 'good day' = at least this many ticked (tweak to taste)
   function medDoneOn(key,iso){ var d=(cached&&cached.dailyChecks&&cached.dailyChecks[iso])||{}; if(d[key]===true) return true; if(d.meds===true && ['sertraline','atorvastatin','trelegy','fexofenadine'].indexOf(key)!==-1) return true; if(d.sprays===true && key==='avamys') return true; return false; }
   function medDone(key){ return medDoneOn(key, today()); }
-  function medsCountFor(iso){ var n=0; for(var i=0;i<MEDS.length;i++){ if(medDoneOn(MEDS[i].key,iso)) n++; } return n; }
+  function medsCountFor(iso){ var T=trackers(), n=0; for(var i=0;i<T.length;i++){ if(medDoneOn(T[i].key,iso)) n++; } return n; }
   function medsStreak(){ var n=0, iso=today(); if(medsCountFor(iso)<STREAK_MIN) iso=addDays(iso,-1); var guard=0; while(medsCountFor(iso)>=STREAK_MIN && guard<400){ n++; iso=addDays(iso,-1); guard++; } return n; }
-  function renderMeds(){ var el=$('[data-meds]'); if(el&&cached) el.innerHTML=MEDS.map(function(m){ return '<button class="medchip'+(medDone(m.key)?' on':'')+'" data-med="'+m.key+'">'+esc(m.label)+'</button>'; }).join('');
-    var stat=$('[data-meds-stat]'); if(stat&&cached){ var c=medsCountFor(today()), s=medsStreak(); stat.textContent=c+'/'+MEDS.length+(s>=1?(' · 🔥 '+s):''); }
+  function renderMeds(){ var T=trackers(); var el=$('[data-meds]'); if(el&&cached) el.innerHTML=T.map(function(m){ return '<button class="medchip'+(medDone(m.key)?' on':'')+'" data-med="'+esc(m.key)+'">'+esc(m.label||m.key)+'</button>'; }).join('');
+    var stat=$('[data-meds-stat]'); if(stat&&cached){ var c=medsCountFor(today()), s=medsStreak(); stat.textContent=c+'/'+T.length+(s>=1?(' · 🔥 '+s):''); }
   }
   function renderNotes(){
     var bd=$('[data-bd]'); if(bd && cached && document.activeElement!==bd){ var v=(cached.scratchDump||''); if(bd.value!==v) bd.value=v; }
@@ -557,6 +560,7 @@
     if(v==='settings'){ openSetup(true); return; }
     document.querySelectorAll('[data-view]').forEach(function(s){ s.classList.toggle('on', s.getAttribute('data-view')===v); });
     document.querySelectorAll('[data-nav]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-nav')===v); });
+    try{ window.scrollTo(0,0); }catch(_){ }   // start each tab at the top (e.g. Diary opens on today, not next week)
     if(v==='today') refresh();
   }
 
